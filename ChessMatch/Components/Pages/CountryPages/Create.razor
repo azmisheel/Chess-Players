@@ -1,0 +1,54 @@
+﻿@page "/countries/create"
+@using Microsoft.EntityFrameworkCore
+@using ChessMatch.Models
+@inject IDbContextFactory<ChessMatch.Data.ChessMatchContext> DbFactory
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Create Country</PageTitle>
+
+<div class="container mt-4">
+    <h1 class="mb-4">Create Country</h1>
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <EditForm method="post" Model="@Country" OnValidSubmit="AddCountry" FormName="create" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" role="alert" />
+                <div class="mb-3">
+                    <label for="name" class="form-label">Name</label>
+                    <InputText id="name" @bind-Value="Country.Name" class="form-control" />
+                    <ValidationMessage For="() => Country.Name" class="text-danger" />
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary me-2">Create</button>
+                    <a href="/countries" class="btn btn-outline-secondary">Back to List</a>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    public Country Country { get; set; } = new();
+    private string? errorMessage;
+    private async Task AddCountry()
+    {
+        using var context = DbFactory.CreateDbContext();
+        try
+        {
+            context.Countries.Add(Country);
+            await context.SaveChangesAsync();
+            NavigationManager.NavigateTo("/countries");
+        }
+        catch (DbUpdateException)
+        {
+            errorMessage = "Unable to create! Cannot have duplicate Names.";
+        }
+    }
+}

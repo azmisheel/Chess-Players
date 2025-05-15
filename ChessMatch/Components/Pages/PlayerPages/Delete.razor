@@ -1,0 +1,80 @@
+﻿@page "/players/delete"
+@using Microsoft.EntityFrameworkCore
+@using ChessMatch.Models
+@inject IDbContextFactory<ChessMatch.Data.ChessMatchContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Delete Player</PageTitle>
+
+<div class="container mt-4">
+    <h1 class="mb-4 text-danger">Delete Player</h1>
+
+    @if (player is null)
+    {
+        <div class="alert alert-info">Loading...</div>
+    }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <p class="mb-4">Are you sure you want to delete this player?</p>
+
+                <dl class="row">
+                    <dt class="col-sm-3">Name</dt>
+                    <dd class="col-sm-9">@player.Name</dd>
+
+                    <dt class="col-sm-3">Rating</dt>
+                    <dd class="col-sm-9">@player.Rating</dd>
+
+                    <dt class="col-sm-3">Age</dt>
+                    <dd class="col-sm-9">@player.Age</dd>
+
+                    <dt class="col-sm-3">Wins</dt>
+                    <dd class="col-sm-9">@player.Wins</dd>
+
+                    <dt class="col-sm-3">Losses</dt>
+                    <dd class="col-sm-9">@player.Losses</dd>
+
+                    <dt class="col-sm-3">Draws</dt>
+                    <dd class="col-sm-9">@player.Draws</dd>
+
+                    <dt class="col-sm-3">Country</dt>
+                    <dd class="col-sm-9">@player.Country.Name</dd>
+                </dl>
+
+                <EditForm method="post" Model="player" OnValidSubmit="DeletePlayer" FormName="delete" Enhance>
+                    <button type="submit" class="btn btn-danger me-2">Delete</button>
+                    <a href="/players" class="btn btn-outline-secondary">Back to List</a>
+                </EditForm>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private Player? player;
+
+    [SupplyParameterFromQuery]
+    private int ID { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        player = await context.Players
+             .Include(p => p.Country)
+             .FirstOrDefaultAsync(m => m.ID == ID);
+
+        if (player is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    private async Task DeletePlayer()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Players.Remove(player!);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/players");
+    }
+}

@@ -1,0 +1,99 @@
+﻿@page "/countries/edit"
+@using Microsoft.EntityFrameworkCore
+@using ChessMatch.Models
+@inject IDbContextFactory<ChessMatch.Data.ChessMatchContext> DbFactory
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Edit Country</PageTitle>
+
+<div class="container mt-4">
+    <h1 class="mb-4">Edit Country</h1>
+
+    @if (Country is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2>@Country.Name</h2>
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">@errorMessage</div>
+                }
+                <EditForm method="post" Model="Country" OnValidSubmit="UpdateCountry" FormName="edit" Enhance>
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" role="alert" />
+                    <input type="hidden" name="Country.ID" value="@Country.ID" />
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Country Name:</label>
+                        <InputText id="name" @bind-Value="Country.Name" class="form-control" />
+                        <ValidationMessage For="() => Country.Name" class="text-danger" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </EditForm>
+            </div>
+        </div>
+    }
+
+    <div class="mt-4">
+        <a href="/countries" class="btn btn-outline-secondary">Back to List</a>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private int ID { get; set; }
+    private string? errorMessage;
+    [SupplyParameterFromForm]
+    private Country? Country { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Country ??= await context.Countries.FirstOrDefaultAsync(m => m.ID == ID);
+
+        if (Country is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    // Mitigate overposting attacks
+    private async Task UpdateCountry()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Attach(Country!).State = EntityState.Modified;
+
+        try
+        {
+            await context.SaveChangesAsync();
+            NavigationManager.NavigateTo("/countries");
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!CountryExists(Country!.ID))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+        catch (DbUpdateException)
+        {
+            errorMessage = "Unable to update! Cannot have duplicate Names.";
+        }
+    }
+
+    private bool CountryExists(int id)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Countries.Any(e => e.ID == id);
+    }
+}

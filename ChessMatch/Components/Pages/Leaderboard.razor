@@ -1,0 +1,62 @@
+﻿@page "/leaderboard"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using ChessMatch.Models
+@using ChessMatch.Data
+@inject IDbContextFactory<ChessMatch.Data.ChessMatchContext> DbFactory
+
+<h2>🏆 Chess Leaderboard</h2>
+
+@if (topPlayers == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Rank</th>
+                <th>Player</th>
+                <th>Country</th>
+                <th>Rating</th>
+                <th>Win Rate</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < topPlayers.Count; i++)
+            {
+                var player = topPlayers[i];
+                <tr>
+                    <td>@(i + 1)</td>
+                    <td>@player.Name</td>
+                    <td>@player.Country?.Name</td>
+                    <td>@player.Rating</td>
+                    <td>
+                        @{
+                            var totalGames = player.Wins + player.Losses + player.Draws;
+                            var winRate = totalGames > 0
+                            ? (player.Wins * 100.0) / totalGames
+                            : 0;
+                        }
+                        @($"{winRate.ToString("F2")}%")
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Player>? topPlayers;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        topPlayers = await context.Players
+            .Include(p => p.Country)
+            .OrderByDescending(p => p.Rating)
+            .Take(10)
+            .ToListAsync();
+    }
+}

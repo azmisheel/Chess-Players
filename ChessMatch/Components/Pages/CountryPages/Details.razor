@@ -1,0 +1,61 @@
+﻿@page "/countries/details"
+@using Microsoft.EntityFrameworkCore
+@using ChessMatch.Models
+@using ChessMatch.Data
+@inject IDbContextFactory<ChessMatch.Data.ChessMatchContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Country Details</PageTitle>
+
+<div class="container mt-4">
+    <h1 class="mb-4">Country Details</h1>
+
+    @if (country != null)
+    {
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2>@country.Name</h2>
+
+                <h4 class="mt-4">Players in this Country:</h4>
+                <ul class="list-group">
+                    @foreach (var player in country.Players)
+                    {
+                        <li class="list-group-item">
+                            <strong>@player.Name</strong> -
+                            Rating: @player.Rating, Age: @player.Age
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+    else
+    {
+        <p>Loading country details...</p>
+    }
+
+    <div class="mt-4">
+        <a href="/countries" class="btn btn-outline-secondary">Back to List</a>
+    </div>
+</div>
+
+@code {
+    private Country? country;
+
+    [SupplyParameterFromQuery]
+    private int ID { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+
+        country = await context.Countries
+            .Include(p => p.Players)
+            .FirstOrDefaultAsync(m => m.ID == ID);
+
+        if (country is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}

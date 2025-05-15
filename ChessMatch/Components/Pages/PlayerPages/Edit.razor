@@ -1,0 +1,152 @@
+﻿@page "/players/edit"
+@using Microsoft.EntityFrameworkCore
+@using ChessMatch.Models
+@inject IDbContextFactory<ChessMatch.Data.ChessMatchContext> DbFactory
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Edit Player</PageTitle>
+
+<div class="container mt-4">
+    <h1 class="mb-4">Edit Player</h1>
+
+    @if (Player is null)
+    {
+        <div class="alert alert-info">Loading...</div>
+    }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <EditForm method="post" Model="Player" OnValidSubmit="UpdatePlayer" FormName="edit" Enhance>
+                    <DataAnnotationsValidator />
+                    <ValidationSummary role="alert" />
+
+                    <input type="hidden" name="Player.ID" value="@Player.ID" />
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Name</label>
+                        <InputText id="name" @bind-Value="Player.Name" class="form-control" />
+                        <ValidationMessage For="() => Player.Name" class="text-danger" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="rating" class="form-label">Rating</label>
+                        <InputNumber id="rating" @bind-Value="Player.Rating" class="form-control" />
+                        <ValidationMessage For="() => Player.Rating" class="text-danger" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="age" class="form-label">Age</label>
+                        <InputNumber id="age" @bind-Value="Player.Age" class="form-control" />
+                        <ValidationMessage For="() => Player.Age" class="text-danger" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="wins" class="form-label">Wins</label>
+                        <InputNumber id="wins" @bind-Value="Player.Wins" class="form-control" />
+                        <ValidationMessage For="() => Player.Wins" class="text-danger" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="losses" class="form-label">Losses</label>
+                        <InputNumber id="losses" @bind-Value="Player.Losses" class="form-control" />
+                        <ValidationMessage For="() => Player.Losses" class="text-danger" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="draws" class="form-label">Draws</label>
+                        <InputNumber id="draws" @bind-Value="Player.Draws" class="form-control" />
+                        <ValidationMessage For="() => Player.Draws" class="text-danger" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="countryid" class="form-label">Country</label>
+                        <InputSelect id="countryid" @bind-Value="Player.CountryID" class="form-control">
+                            <option value="">-- Select Country --</option>
+                            @foreach (var country in Countries)
+                            {
+                                <option value="@country.ID">@country.Name</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="() => Player.CountryID" class="text-danger" />
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary me-2">Save</button>
+                        <a href="/players" class="btn btn-outline-secondary">Back to List</a>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private int ID { get; set; }
+
+    [SupplyParameterFromForm]
+    private Player? Player { get; set; }
+    private string? errorMessage;
+    private List<Country> Countries { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Player ??= await context.Players.FirstOrDefaultAsync(m => m.ID == ID);
+        Countries = await context.Countries.ToListAsync();
+        if (Player is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    private async Task UpdatePlayer()
+    {
+        using var context = DbFactory.CreateDbContext();
+        //context.Attach(Player!).State = EntityState.Modified;
+
+        var playerUpdate = await context.Players
+       .FirstOrDefaultAsync(p => p.ID == Player.ID);
+
+        if (playerUpdate == null)
+        {
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+
+        context.Entry(playerUpdate).CurrentValues.SetValues(Player);
+        playerUpdate.CountryID = Player.CountryID;
+
+        try
+        {
+            await context.SaveChangesAsync();
+            NavigationManager.NavigateTo("/players");
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!PlayerExists(Player!.ID))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+        catch (DbUpdateException)
+        {
+            errorMessage = "Unable to update! Cannot have duplicate Names.";
+        }
+    }
+
+    private bool PlayerExists(int id)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Players.Any(e => e.ID == id);
+    }
+}

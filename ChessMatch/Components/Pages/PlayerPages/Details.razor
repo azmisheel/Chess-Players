@@ -1,0 +1,69 @@
+﻿@page "/players/details"
+@using Microsoft.EntityFrameworkCore
+@using ChessMatch.Models
+@inject IDbContextFactory<ChessMatch.Data.ChessMatchContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Player Details</PageTitle>
+
+<div class="container mt-4">
+    <h1 class="mb-4">Player Details</h1>
+
+    @if (player is null)
+    {
+        <div class="alert alert-info">Loading...</div>
+    }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h4 class="card-title mb-4">@player.Name</h4>
+
+                <dl class="row">
+                    <dt class="col-sm-3">Rating</dt>
+                    <dd class="col-sm-9">@player.Rating</dd>
+
+                    <dt class="col-sm-3">Age</dt>
+                    <dd class="col-sm-9">@player.Age</dd>
+
+                    <dt class="col-sm-3">Wins</dt>
+                    <dd class="col-sm-9">@player.Wins</dd>
+
+                    <dt class="col-sm-3">Losses</dt>
+                    <dd class="col-sm-9">@player.Losses</dd>
+
+                    <dt class="col-sm-3">Draws</dt>
+                    <dd class="col-sm-9">@player.Draws</dd>
+
+                    <dt class="col-sm-3">Country</dt>
+                    <dd class="col-sm-9">@player.Country.Name</dd>
+                </dl>
+
+                <div class="mt-4">
+                    <a href="@($"/players/edit?id={player.ID}")" class="btn btn-primary me-2">Edit</a>
+                    <a href="/players" class="btn btn-outline-secondary">Back to List</a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private Player? player;
+
+    [SupplyParameterFromQuery]
+    private int ID { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        player = await context.Players
+            .Include(p => p.Country)
+            .FirstOrDefaultAsync(m => m.ID == ID);
+
+        if (player is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}
