@@ -29,7 +29,7 @@ A Blazor Server web application for managing international chess players and org
 - **SQLite** for database
 - **LINQ** for data querying
 - **C#** for backend logic
-- Bootstraop for Design
+- **Bootstrap** for Design
 
 ## 🚀 Getting Started
 
